@@ -1,29 +1,29 @@
 # 🚀 Task Pilot System
-
+<!-- 
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1-000000?style=for-the-badge&logo=flask&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 
----
+--- -->
 
 ## 📌 Project Definition
-**Task Pilot System** is a simple, fast, full-stack task management application designed to help individuals and teams organize, track, and complete daily tasks efficiently. It provides a clean dashboard, progress statistics, task filtering, sorting, and inline editing — all accessible instantly without complex user authentication.
+**TaskPilot ** is a simple, fast, full-stack task management application designed to help individuals and teams organize, track, and complete daily tasks efficiently. It provides a clean dashboard, progress statistics, task filtering, sorting, and inline editing — all accessible instantly without complex user authentication.
 
 ---
 
-## ✨ Features
-- 📝 **Create Task**: Add new tasks with titles, detailed descriptions, priority levels, statuses, and due dates.
-- 📊 **Interactive Dashboard**: View overall task stats, completed percentages, and overdue alerts at a glance.
-- 🔍 **Smart Search & Filtering**: Search tasks by keywords and filter by status (`pending`, `in_progress`, `completed`) or priority (`low`, `medium`, `high`).
-- ↕️ **Sorting & Pagination**: Sort tasks by creation date, due date, priority, or status with multi-page navigation.
-- ✏️ **Update & Complete**: Update task details or mark tasks complete with quick actions.
-- 🗑️ **Soft Delete**: Remove tasks safely from view while preserving data integrity.
-- ⚡ **Instant Access**: Zero authentication required — open the app and start managing tasks immediately.
+##  Features
+- **Create Task**: Add new tasks with titles, detailed descriptions, priority levels, statuses, and due dates.
+- **Interactive Dashboard**: View overall task stats, completed percentages, and overdue alerts at a glance.
+- **Smart Search & Filtering**: Search tasks by keywords and filter by status (`pending`, `in_progress`, `completed`) or priority (`low`, `medium`, `high`).
+- **Sorting & Pagination**: Sort tasks by creation date, due date, priority, or status with multi-page navigation.
+- **Update & Complete**: Update task details or mark tasks complete with quick actions.
+- **Soft Delete**: Remove tasks safely from view while preserving data integrity.
+- **Instant Access**: Zero authentication required — open the app and start managing tasks immediately.
 
 ---
 
-## 🛠️ Technologies Used
+##  Technologies Used
 
 ### Backend
 - **Python 3.13** — Primary backend language
@@ -41,7 +41,7 @@
 
 ---
 
-## 💻 How to Run Project Locally
+## How to Run Project Locally
 
 ### Prerequisites
 Make sure you have installed on your computer:
@@ -148,7 +148,7 @@ Open a **new terminal window**:
 
 ---
 
-## 📡 API Endpoints
+<!-- ## API Endpoints
 
 All backend endpoints are accessible at `http://127.0.0.1:5000/api`:
 
@@ -219,4 +219,4 @@ All backend endpoints are accessible at `http://127.0.0.1:5000/api`:
 
 ## 🔮 Future Improvements
 - 🔔 **Email & Due Date Notifications**: Automated reminders for upcoming and overdue tasks.
-- 📄 **Data Export**: Export task records into CSV or PDF files.
+- 📄 **Data Export**: Export task records into CSV or PDF files. -->
