@@ -1,4 +1,3 @@
-# 🚀 Task Pilot System
 <!-- 
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1-000000?style=for-the-badge&logo=flask&logoColor=white)
@@ -7,7 +6,7 @@
 
 --- -->
 
-## 📌 Project Definition
+## Project Definition
 **TaskPilot ** is a simple, fast, full-stack task management application designed to help individuals and teams organize, track, and complete daily tasks efficiently. It provides a clean dashboard, progress statistics, task filtering, sorting, and inline editing — all accessible instantly without complex user authentication.
 
 ---
@@ -53,7 +52,7 @@ Make sure you have installed on your computer:
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/your-username/Task-pilot-system.git
+git clone https://github.com/tanishqtiwari45/TaskPilot.git
 cd Task-pilot-system
 ```
 
