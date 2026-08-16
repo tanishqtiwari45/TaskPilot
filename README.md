@@ -95,13 +95,31 @@ cd Task-pilot-system
    DB_PORT=3306
    DB_USER=root
    DB_PASSWORD=your_mysql_password
-   DB_NAME=task_pilot_db
+   DB_NAME=task_pilot
    ```
 
-4. **Initialize Database Tables**:
+4. **MySQL Setup and Database Initialization**:
+   - Start your local MySQL 8 server.
+   - Make sure the database name matches `task_pilot`.
+   - In MySQL Workbench, connect with:
+     - Host: `127.0.0.1`
+     - Port: `3306`
+     - Username: `root`
+     - Password: your configured MySQL password
+     - Database: `task_pilot`
+   - Run the setup script to create the tables and default demo user:
    ```bash
    python database.py
    ```
+
+   The script automatically creates the `task_pilot` database and the `users` and `tasks` tables if they do not already exist.
+
+5. **Default Demo Login**:
+   ```text
+   Username: demo
+   Password: demo123
+   ```
+   This demo user is created automatically during database initialization.
 
 5. **Start Flask Server**:
    ```bash
@@ -114,6 +132,8 @@ cd Task-pilot-system
 ### Step 3: Frontend Setup (React & Vite)
 
 Open a **new terminal window**:
+
+> If the backend is not running, the frontend may show login or API errors. Make sure MySQL is running and the app has already initialized the database first.
 
 1. **Navigate to the `frontend` folder**:
    ```bash
