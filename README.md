@@ -7,7 +7,7 @@
 --- -->
 
 ## Project Definition
-**TaskPilot ** is a simple, fast, full-stack task management application designed to help individuals and teams organize, track, and complete daily tasks efficiently. It provides a clean dashboard, progress statistics, task filtering, sorting, and inline editing — all accessible instantly without complex user authentication.
+**TaskPilot** is a simple, fast, full-stack task management application designed to help individuals and teams organize, track, and complete daily tasks efficiently. It provides a clean dashboard, progress statistics, task filtering, sorting, and inline editing — all accessible instantly without complex user authentication.
 
 ---
 
