@@ -12,8 +12,9 @@ TaskPilot Backend — Flask API for Task Management.
 Run it with: python app.py
 """
 import math
+import os
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 from config import Config
@@ -29,7 +30,10 @@ from auth import require_auth, generate_token, verify_password, hash_password
 
 def create_app():
     """Create and configure the Flask application."""
-    app = Flask(__name__)
+    # ── Path to frontend dist folder ──
+    frontend_dist_path = os.path.join(os.path.dirname(__file__), "frontend", "dist")
+    
+    app = Flask(__name__, static_folder=frontend_dist_path, static_url_path="/")
 
     # ── Configuration ──
     app.config["SECRET_KEY"] = Config.SECRET_KEY
@@ -346,6 +350,24 @@ def create_app():
             "high_priority": int(stats.get("high_priority") or 0),
             "overdue": int(stats.get("overdue") or 0),
         }), 200
+
+    # ═══════════════════════════════════════════════
+    # 4. FRONTEND ROUTES (MUST BE LAST - catch-all)
+    # ═══════════════════════════════════════════════
+
+    @app.route("/")
+    def serve_frontend():
+        """Serve the React frontend."""
+        return send_from_directory(frontend_dist_path, "index.html")
+
+    @app.route("/<path:path>")
+    def serve_static(path):
+        """Serve static files and fallback to index.html for client-side routing."""
+        file_path = os.path.join(frontend_dist_path, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return send_from_directory(frontend_dist_path, path)
+        # Fallback to index.html for client-side routing
+        return send_from_directory(frontend_dist_path, "index.html")
 
     return app
 
