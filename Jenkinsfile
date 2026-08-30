@@ -582,6 +582,7 @@ pipeline {
     environment {
         // Project
         FRONTEND_DIR = 'frontend'
+        UAT_ROOT = 'C:\\TaskPilot-UAT'
 
         // Python
         PYTHON_EXE = 'C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
@@ -959,6 +960,187 @@ pipeline {
                     echo.
                     echo Build output:
                     dir "dist"
+                '''
+            }
+        }
+
+        // =========================================================
+        // 6. PACKAGE APPLICATION
+        // =========================================================
+        stage('Package Application') {
+            steps {
+                echo '=================================================='
+                echo '             PACKAGE APPLICATION'
+                echo '=================================================='
+
+                bat '''
+                    setlocal enabledelayedexpansion
+
+                    set "PACKAGE_ROOT=%UAT_ROOT%\releases\TaskPilot-UAT-%BUILD_NUMBER%"
+                    set "PACKAGE_ZIP=%UAT_ROOT%\TaskPilot-UAT-%BUILD_NUMBER%.zip"
+
+                    if exist "%UAT_ROOT%" (
+                        rmdir /S /Q "%UAT_ROOT%"
+                    )
+
+                    mkdir "%UAT_ROOT%"
+                    mkdir "%UAT_ROOT%\releases"
+                    mkdir "%UAT_ROOT%\logs"
+
+                    if not exist "%WORKSPACE%\requirements.txt" (
+                        echo ERROR: requirements.txt is missing from the repository.
+                        exit /b 1
+                    )
+
+                    if not exist "%WORKSPACE%\%FRONTEND_DIR%\dist\index.html" (
+                        echo ERROR: Frontend dist index.html is missing.
+                        exit /b 1
+                    )
+
+                    echo Copying Python backend files...
+                    xcopy /E /I /Y "%WORKSPACE%\*.py" "%PACKAGE_ROOT%\" >nul
+                    xcopy /E /I /Y "%WORKSPACE%\requirements.txt" "%PACKAGE_ROOT%\" >nul
+                    if exist "%WORKSPACE%\.env" (
+                        xcopy /Y "%WORKSPACE%\.env" "%PACKAGE_ROOT%\" >nul
+                    )
+
+                    echo Copying production frontend files...
+                    xcopy /E /I /Y "%WORKSPACE%\%FRONTEND_DIR%\dist" "%PACKAGE_ROOT%\%FRONTEND_DIR%\dist\" >nul
+
+                    if not exist "%PACKAGE_ROOT%\app.py" (
+                        echo ERROR: Deployment package is missing app.py.
+                        exit /b 1
+                    )
+
+                    if not exist "%PACKAGE_ROOT%\%FRONTEND_DIR%\dist\index.html" (
+                        echo ERROR: Deployment package is missing frontend dist index.html.
+                        exit /b 1
+                    )
+
+                    echo Creating deployment zip artifact...
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Compress-Archive -Path '%PACKAGE_ROOT%\*' -DestinationPath '%PACKAGE_ZIP%' -Force"
+
+                    if errorlevel 1 (
+                        echo ERROR: Packaging failed.
+                        exit /b 1
+                    )
+
+                    echo Package created successfully: %PACKAGE_ZIP%
+                '''
+            }
+        }
+
+        // =========================================================
+        // 7. DEPLOY TO UAT
+        // =========================================================
+        stage('Deploy UAT') {
+            steps {
+                echo '=================================================='
+                echo '               DEPLOY UAT'
+                echo '=================================================='
+
+                bat '''
+                    setlocal enabledelayedexpansion
+
+                    set "PACKAGE_ROOT=%UAT_ROOT%\releases\TaskPilot-UAT-%BUILD_NUMBER%"
+                    set "DEPLOY_DIR=%UAT_ROOT%\current"
+
+                    if exist "%DEPLOY_DIR%" (
+                        rmdir /S /Q "%DEPLOY_DIR%"
+                    )
+
+                    xcopy /E /I /Y "%PACKAGE_ROOT%" "%DEPLOY_DIR%\" >nul
+
+                    if errorlevel 1 (
+                        echo ERROR: UAT deployment copy failed.
+                        exit /b 1
+                    )
+
+                    if not exist "%DEPLOY_DIR%\app.py" (
+                        echo ERROR: UAT deployment directory is missing app.py.
+                        exit /b 1
+                    )
+
+                    echo UAT deployment completed: %DEPLOY_DIR%
+                '''
+            }
+        }
+
+        // =========================================================
+        // 8. UAT HEALTH / SMOKE TEST
+        // =========================================================
+        stage('UAT Health Check') {
+            steps {
+                echo '=================================================='
+                echo '           UAT HEALTH / SMOKE TEST'
+                echo '=================================================='
+
+                bat '''
+                    setlocal enabledelayedexpansion
+
+                    set "DEPLOY_DIR=%UAT_ROOT%\current"
+                    set "VENV_DIR=%DEPLOY_DIR%\.venv"
+                    set "LOG_FILE=%UAT_ROOT%\logs\taskpilot-uat.log"
+                    set "PORT=5000"
+
+                    echo Preparing the UAT runtime environment...
+                    if exist "%VENV_DIR%" (
+                        rmdir /S /Q "%VENV_DIR%"
+                    )
+
+                    "%PYTHON_EXE%" -m venv "%VENV_DIR%"
+                    if errorlevel 1 (
+                        echo ERROR: Failed to create the UAT virtual environment.
+                        exit /b 1
+                    )
+
+                    "%VENV_DIR%\Scripts\python.exe" -m pip install --upgrade pip setuptools wheel
+                    if errorlevel 1 (
+                        echo ERROR: Failed to upgrade pip in UAT environment.
+                        exit /b 1
+                    )
+
+                    "%VENV_DIR%\Scripts\python.exe" -m pip install -r "%DEPLOY_DIR%\requirements.txt"
+                    if errorlevel 1 (
+                        echo ERROR: Failed to install backend dependencies in UAT environment.
+                        exit /b 1
+                    )
+
+                    echo Initializing the UAT database and demo user...
+                    "%VENV_DIR%\Scripts\python.exe" "%DEPLOY_DIR%\database.py"
+                    if errorlevel 1 (
+                        echo ERROR: UAT database initialization failed.
+                        exit /b 1
+                    )
+
+                    echo Stopping any previous TaskPilot UAT process on the health port...
+                    for /f "tokens=1,2,3,4,5" %%a in ('netstat -ano ^| findstr :5000') do (
+                        if not "%%e"=="" (
+                            taskkill /PID %%e /F >nul 2>&1
+                        )
+                    )
+
+                    if exist "%LOG_FILE%" (
+                        del /Q "%LOG_FILE%"
+                    )
+
+                    echo Starting TaskPilot in the UAT environment...
+                    start "TaskPilot-UAT" /B "%VENV_DIR%\Scripts\python.exe" "%DEPLOY_DIR%\app.py" > "%LOG_FILE%" 2>&1
+
+                    echo Waiting for the backend to start...
+                    timeout /T 15 /NOBREAK >nul
+
+                    echo Calling the TaskPilot health endpoint: http://127.0.0.1:5000/health
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $response = Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing -TimeoutSec 20; if ($response.StatusCode -ne 200) { throw 'Health check returned status code ' + $response.StatusCode }; $body = $response.Content; if ($body -notmatch '\"status\"\s*:\s*\"healthy\"') { throw 'Health endpoint did not return the expected healthy response' }; Write-Host 'UAT health check passed: ' + $body"
+
+                    if errorlevel 1 (
+                        echo ERROR: UAT health check failed.
+                        echo Showing UAT log output:
+                        type "%LOG_FILE%"
+                        exit /b 1
+                    )
+
+                    echo UAT deployment and health check passed successfully.
                 '''
             }
         }
