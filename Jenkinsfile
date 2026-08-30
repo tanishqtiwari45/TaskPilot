@@ -977,7 +977,7 @@ pipeline {
                     setlocal enabledelayedexpansion
 
                     set "PACKAGE_ROOT=%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%"
-                    set "PACKAGE_ZIP=%UAT_ROOT%\\ releases\\TaskPilot-UAT-%BUILD_NUMBER%.zip"
+                    set "PACKAGE_ZIP=%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%.zip"
 
                     if exist "%UAT_ROOT%" (
                         rmdir /S /Q "%UAT_ROOT%"
