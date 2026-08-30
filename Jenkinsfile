@@ -410,32 +410,59 @@ pipeline {
             }
         }
 
+        // stage('Backend Setup') {
+        //     steps {
+        //         echo 'Setting up Python backend...'
+
+        //         bat '''
+        //             python --version
+        //             python -m pip --version
+
+        //             if exist "%VENV_DIR%" (
+        //                 echo Removing existing virtual environment...
+        //                 rmdir /S /Q "%VENV_DIR%"
+        //             )
+
+        //             echo Creating Python virtual environment...
+        //             python -m venv "%VENV_DIR%"
+
+        //             echo Upgrading pip...
+        //             "%VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
+
+        //             echo Installing backend dependencies...
+        //             "%VENV_DIR%\\Scripts\\python.exe" -m pip install -r requirements.txt
+
+        //             echo Backend setup completed successfully.
+        //         '''
+        //     }
+        // }
+
         stage('Backend Setup') {
-            steps {
-                echo 'Setting up Python backend...'
+    steps {
+        echo 'Testing Python from Jenkins...'
 
-                bat '''
-                    python --version
-                    python -m pip --version
+        bat '''
+            echo ========================================
+            echo Jenkins Python Diagnostic
+            echo ========================================
 
-                    if exist "%VENV_DIR%" (
-                        echo Removing existing virtual environment...
-                        rmdir /S /Q "%VENV_DIR%"
-                    )
+            echo Current PATH:
+            echo %PATH%
 
-                    echo Creating Python virtual environment...
-                    python -m venv "%VENV_DIR%"
+            echo.
+            echo Searching for Python:
+            where python
 
-                    echo Upgrading pip...
-                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
+            echo.
+            echo Checking Python directly:
+            "C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" --version
 
-                    echo Installing backend dependencies...
-                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install -r requirements.txt
-
-                    echo Backend setup completed successfully.
-                '''
-            }
-        }
+            echo.
+            echo Checking pip directly:
+            "C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m pip --version
+        '''
+    }
+}
 
         stage('Backend Tests') {
             steps {
