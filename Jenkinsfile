@@ -588,6 +588,13 @@ pipeline {
         PYTHON_EXE = 'C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
         VENV_DIR = "${WORKSPACE}\\.venv"
         PYTHONPATH = "${WORKSPACE}"
+
+        // MySQL / UAT runtime configuration
+        DB_HOST = '127.0.0.1'
+        DB_PORT = '3306'
+        DB_USER = 'root'
+        DB_PASSWORD = 'Octe@2026$#'
+        DB_NAME = 'task_pilot'
     }
 
     stages {
