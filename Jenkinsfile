@@ -480,7 +480,7 @@ pipeline {
                     echo Installing frontend dependencies...
                     npm install --no-audit --no-fund
 
-                    if not exist "node_modules\vite\bin\vite.js" (
+                    if not exist "node_modules\\vite\\bin\\vite.js" (
                         echo ERROR: Vite dependency was not installed correctly.
                         exit /b 1
                     )
