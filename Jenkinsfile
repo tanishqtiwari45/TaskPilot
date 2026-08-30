@@ -388,6 +388,7 @@ pipeline {
         FRONTEND_DIR = 'frontend'
         VENV_DIR = "${WORKSPACE}\\.venv"
         PYTHONPATH = "${WORKSPACE}"
+        PYTHON_EXE = 'C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
     }
 
     stages {
@@ -410,78 +411,57 @@ pipeline {
             }
         }
 
-        // stage('Backend Setup') {
-        //     steps {
-        //         echo 'Setting up Python backend...'
-
-        //         bat '''
-        //             python --version
-        //             python -m pip --version
-
-        //             if exist "%VENV_DIR%" (
-        //                 echo Removing existing virtual environment...
-        //                 rmdir /S /Q "%VENV_DIR%"
-        //             )
-
-        //             echo Creating Python virtual environment...
-        //             python -m venv "%VENV_DIR%"
-
-        //             echo Upgrading pip...
-        //             "%VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
-
-        //             echo Installing backend dependencies...
-        //             "%VENV_DIR%\\Scripts\\python.exe" -m pip install -r requirements.txt
-
-        //             echo Backend setup completed successfully.
-        //         '''
-        //     }
-        // }
-
         stage('Backend Setup') {
-    steps {
-        echo 'Testing Python from Jenkins...'
+            steps {
+                echo 'Setting up Python backend environment...'
 
-        bat '''
-            echo ========================================
-            echo Jenkins Python Diagnostic
-            echo ========================================
+                bat '''
+                    echo Using workspace: "%WORKSPACE%"
+                    echo Using Python executable: "%PYTHON_EXE%"
 
-            echo Current PATH:
-            echo %PATH%
+                    if not exist "%VENV_DIR%" (
+                        echo Creating virtual environment...
+                        "%PYTHON_EXE%" -m venv "%VENV_DIR%"
+                    ) else (
+                        echo Virtual environment already exists.
+                    )
 
-            echo.
-            echo Searching for Python:
-            where python
+                    if not exist "%VENV_DIR%\\Scripts\\python.exe" (
+                        echo ERROR: Virtual environment python executable was not created.
+                        exit /b 1
+                    )
 
-            echo.
-            echo Checking Python directly:
-            "C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" --version
+                    echo Upgrading pip...
+                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
 
-            echo.
-            echo Checking pip directly:
-            "C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m pip --version
-        '''
-    }
-}
+                    echo Installing backend dependencies...
+                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install -r requirements.txt
+
+                    echo Installing pytest for CI validation...
+                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install pytest pytest-cov
+
+                    echo Backend setup completed successfully.
+                '''
+            }
+        }
 
         stage('Backend Tests') {
             steps {
                 echo 'Running backend tests...'
 
                 bat '''
-                    if exist "tests" (
+                    if exist "%WORKSPACE%\\tests" (
                         echo Tests directory found.
-                        echo Installing pytest...
-                        "%VENV_DIR%\\Scripts\\python.exe" -m pip install pytest pytest-cov
-
                         echo Running pytest...
                         "%VENV_DIR%\\Scripts\\python.exe" -m pytest tests -v --tb=short
+                    ) else if exist "%WORKSPACE%\\test_*.py" (
+                        echo Root-level test module found.
+                        echo Running pytest...
+                        "%VENV_DIR%\\Scripts\\python.exe" -m pytest test_*.py -v --tb=short
                     ) else (
-                        echo No tests directory found.
+                        echo No pytest suite found.
                         echo Running Python syntax validation...
-
                         "%VENV_DIR%\\Scripts\\python.exe" -m compileall -q .
-
                         echo Python syntax validation completed successfully.
                     )
                 '''
