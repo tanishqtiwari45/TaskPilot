@@ -490,8 +490,11 @@ pipeline {
                         npm install --no-audit --no-fund
                     )
 
+                    echo Verifying Vite installation...
+                    npm ls vite --depth=0
                     if not exist "node_modules\\vite\\bin\\vite.js" (
                         echo ERROR: Vite dependency was not installed correctly.
+                        dir node_modules
                         exit /b 1
                     )
 
