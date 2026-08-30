@@ -76,9 +76,9 @@ def pytest_sessionstart(session):
 def pytest_sessionfinish(session, exitstatus):
     """End of test session."""
     if exitstatus == 0:
-        print("\n✓ All tests passed!")
+        print("\n[PASS] All tests passed!")
     else:
-        print(f"\n✗ Tests failed with exit status: {exitstatus}")
+        print(f"\n[FAIL] Tests failed with exit status: {exitstatus}")
 
 
 def pytest_collection_modifyitems(config, items):
