@@ -1166,7 +1166,18 @@ pipeline {
                     timeout /T 15 /NOBREAK >nul
 
                     echo Calling the TaskPilot health endpoint: http://127.0.0.1:5000/health
-                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $response = Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing -TimeoutSec 20; if ($response.StatusCode -ne 200) { throw 'Health check returned status code ' + $response.StatusCode }; $body = $response.Content; if ($body -notmatch '"status"\\s*:\\s*"healthy"') { throw 'Health endpoint did not return the expected healthy response' }; Write-Host 'UAT health check passed: ' + $body"
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+                        "$ErrorActionPreference='Stop'; " ^
+                        "$response = Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing -TimeoutSec 20; " ^
+                        "if ($response.StatusCode -ne 200) { " ^
+                            "throw 'Health check returned status code ' + $response.StatusCode " ^
+                        "}; " ^
+                        "$body = $response.Content; " ^
+                        "Write-Host 'Response Body: ' $body; " ^
+                        "if ($body -notmatch 'healthy') { " ^
+                            "throw 'Health endpoint response does not contain healthy status' " ^
+                        "}; " ^
+                        "Write-Host 'UAT health check passed'"
 
                     if errorlevel 1 (
                         echo ERROR: UAT health check failed.
