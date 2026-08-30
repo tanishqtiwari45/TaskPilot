@@ -919,9 +919,9 @@ pipeline {
 
                     echo Running frontend production build...
 
-                    // npx --no-install vite build
+                   
                        npm run build
-                       
+
                     if errorlevel 1 (
                         echo ERROR: Vite production build failed.
                         exit /b 1
