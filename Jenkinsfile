@@ -474,11 +474,21 @@ pipeline {
 
                 bat '''
                     cd /d "%WORKSPACE%\\frontend"
+
+                    if not exist "package.json" (
+                        echo ERROR: frontend/package.json was not found in the workspace.
+                        exit /b 1
+                    )
+
                     node --version
                     npm --version
 
                     echo Installing frontend dependencies...
-                    npm install --no-audit --no-fund
+                    if exist "package-lock.json" (
+                        npm ci --no-audit --no-fund
+                    ) else (
+                        npm install --no-audit --no-fund
+                    )
 
                     if not exist "node_modules\\vite\\bin\\vite.js" (
                         echo ERROR: Vite dependency was not installed correctly.
