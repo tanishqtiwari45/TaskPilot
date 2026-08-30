@@ -1008,7 +1008,18 @@ pipeline {
                     xcopy /E /I /Y "%WORKSPACE%\\*.py" "%PACKAGE_ROOT%\" >nul
                     xcopy /E /I /Y "%WORKSPACE%\\requirements.txt" "%PACKAGE_ROOT%\" >nul
                     if exist "%WORKSPACE%\\.env" (
-                        xcopy /Y "%WORKSPACE%\\.env" "%PACKAGE_ROOT%\" >nul
+                        xcopy /Y /H "%WORKSPACE%\\.env" "%PACKAGE_ROOT%\" >nul
+                    ) else (
+                        echo Creating runtime .env for UAT package...
+                        (
+                            echo FLASK_ENV=development
+                            echo SECRET_KEY=taskpilot-uat-secret-key
+                            echo DB_HOST=%DB_HOST%
+                            echo DB_PORT=%DB_PORT%
+                            echo DB_USER=%DB_USER%
+                            echo DB_PASSWORD=%DB_PASSWORD%
+                            echo DB_NAME=%DB_NAME%
+                        ) > "%PACKAGE_ROOT%\\.env"
                     )
 
                     echo Copying production frontend files...
@@ -1089,6 +1100,23 @@ pipeline {
                     set "VENV_DIR=%DEPLOY_DIR%\\.venv"
                     set "LOG_FILE=%UAT_ROOT%\\logs\\taskpilot-uat.log"
                     set "PORT=5000"
+                    set "DB_HOST=%DB_HOST%"
+                    set "DB_PORT=%DB_PORT%"
+                    set "DB_USER=%DB_USER%"
+                    set "DB_PASSWORD=%DB_PASSWORD%"
+                    set "DB_NAME=%DB_NAME%"
+
+                    if not exist "%DEPLOY_DIR%\\.env" (
+                        (
+                            echo FLASK_ENV=development
+                            echo SECRET_KEY=taskpilot-uat-secret-key
+                            echo DB_HOST=%DB_HOST%
+                            echo DB_PORT=%DB_PORT%
+                            echo DB_USER=%DB_USER%
+                            echo DB_PASSWORD=%DB_PASSWORD%
+                            echo DB_NAME=%DB_NAME%
+                        ) > "%DEPLOY_DIR%\\.env"
+                    )
 
                     echo Preparing the UAT runtime environment...
                     if exist "%VENV_DIR%" (
