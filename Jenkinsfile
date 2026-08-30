@@ -583,6 +583,7 @@ pipeline {
         // Project
         FRONTEND_DIR = 'frontend'
         UAT_ROOT = 'C:\\TaskPilot-UAT'
+        PROD_ROOT = 'C:\\TaskPilot-PROD'
 
         // Python
         PYTHON_EXE = 'C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
@@ -595,6 +596,10 @@ pipeline {
         DB_USER = 'root'
         DB_PASSWORD = 'Octe@2026$#'
         DB_NAME = 'task_pilot'
+
+        // Production Configuration
+        PROD_PORT = '5001'
+        PROD_ENV = 'production'
     }
 
     stages {
@@ -1187,6 +1192,185 @@ pipeline {
                     )
 
                     echo UAT deployment and health check passed successfully.
+                '''
+            }
+        }
+
+        // =========================================================
+        // 9. PRODUCTION APPROVAL
+        // =========================================================
+        stage('Production Approval') {
+            steps {
+                echo '=================================================='  
+                echo '          PRODUCTION DEPLOYMENT APPROVAL'
+                echo '=================================================='  
+                echo ''
+                echo 'UAT has passed successfully.'
+                echo ''
+                echo 'Ready to deploy to PRODUCTION?'
+                echo ''
+                echo 'This will deploy the application to:'
+                echo 'Location: C:\\TaskPilot-PROD'
+                echo 'Port:     5001'
+                echo ''
+
+                input(
+                    id: 'ProductionApproval',
+                    message: 'Deploy to PRODUCTION?',
+                    ok: 'Deploy to PROD',
+                    submitter: ''
+                )
+
+                echo 'PRODUCTION DEPLOYMENT APPROVED'
+            }
+        }
+
+        // =========================================================
+        // 10. DEPLOY PROD
+        // =========================================================
+        stage('Deploy PROD') {
+            steps {
+                echo '=================================================='
+                echo '            DEPLOY TO PRODUCTION'
+                echo '=================================================='
+
+                bat '''
+                    setlocal enabledelayedexpansion
+
+                    set "PACKAGE_ROOT=%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%"
+                    set "PROD_DEPLOY_DIR=%PROD_ROOT%\\current"
+
+                    if not exist "%PACKAGE_ROOT%" (
+                        echo ERROR: UAT artifact not found at %PACKAGE_ROOT%
+                        exit /b 1
+                    )
+
+                    echo Creating PROD environment structure...
+                    if not exist "%PROD_ROOT%" (
+                        mkdir "%PROD_ROOT%"
+                    )
+
+                    if not exist "%PROD_ROOT%\\releases" (
+                        mkdir "%PROD_ROOT%\\releases"
+                    )
+
+                    if not exist "%PROD_ROOT%\\logs" (
+                        mkdir "%PROD_ROOT%\\logs"
+                    )
+
+                    echo Removing previous PROD deployment...
+                    if exist "%PROD_DEPLOY_DIR%" (
+                        rmdir /S /Q "%PROD_DEPLOY_DIR%"
+                    )
+
+                    echo Copying UAT artifact to PROD...
+                    xcopy /E /I /Y "%PACKAGE_ROOT%\\*" "%PROD_DEPLOY_DIR%\\*" >nul
+
+                    if errorlevel 1 (
+                        echo ERROR: PROD deployment copy failed.
+                        exit /b 1
+                    )
+
+                    if not exist "%PROD_DEPLOY_DIR%\\app.py" (
+                        echo ERROR: PROD deployment directory is missing app.py.
+                        exit /b 1
+                    )
+
+                    echo PROD deployment copied successfully: %PROD_DEPLOY_DIR%
+                '''
+            }
+        }
+
+        // =========================================================
+        // 11. PROD HEALTH CHECK
+        // =========================================================
+        stage('PROD Health Check') {
+            steps {
+                echo '=================================================='
+                echo '         PRODUCTION HEALTH / SMOKE TEST'
+                echo '=================================================='
+
+                bat '''
+                    setlocal enabledelayedexpansion
+
+                    set "PROD_DEPLOY_DIR=%PROD_ROOT%\\current"
+                    set "PROD_VENV_DIR=%PROD_DEPLOY_DIR%\\.venv"
+                    set "PROD_LOG_FILE=%PROD_ROOT%\\logs\\taskpilot-prod.log"
+                    set "PROD_PORT=%PROD_PORT%"
+
+                    echo Preparing the PROD runtime environment...
+                    if exist "%PROD_VENV_DIR%" (
+                        rmdir /S /Q "%PROD_VENV_DIR%"
+                    )
+
+                    "%PYTHON_EXE%" -m venv "%PROD_VENV_DIR%"
+                    if errorlevel 1 (
+                        echo ERROR: Failed to create the PROD virtual environment.
+                        exit /b 1
+                    )
+
+                    "%PROD_VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel >nul 2>&1
+                    if errorlevel 1 (
+                        echo ERROR: Failed to upgrade pip in PROD environment.
+                        exit /b 1
+                    )
+
+                    "%PROD_VENV_DIR%\\Scripts\\python.exe" -m pip install -r "%PROD_DEPLOY_DIR%\\requirements.txt" >nul 2>&1
+                    if errorlevel 1 (
+                        echo ERROR: Failed to install backend dependencies in PROD environment.
+                        exit /b 1
+                    )
+
+                    echo Initializing the PROD database and demo user...
+                    "%PROD_VENV_DIR%\\Scripts\\python.exe" "%PROD_DEPLOY_DIR%\\database.py"
+                    if errorlevel 1 (
+                        echo ERROR: PROD database initialization failed.
+                        exit /b 1
+                    )
+
+                    echo Stopping any previous TaskPilot PROD process on port %PROD_PORT%...
+                    for /f "tokens=1,2,3,4,5" %%a in ('netstat -ano ^| findstr :%PROD_PORT%') do (
+                        if not "%%e"==\"\" (
+                            taskkill /PID %%e /F >nul 2>&1
+                        )
+                    )
+
+                    if exist "%PROD_LOG_FILE%" (
+                        del /Q "%PROD_LOG_FILE%"
+                    )
+
+                    echo Starting TaskPilot in the PROD environment on port %PROD_PORT%...
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command ^^
+                        "$env:PORT='%PROD_PORT%'; " ^^
+                        "$env:FLASK_ENV='%PROD_ENV%'; " ^^
+                        "& '%PROD_VENV_DIR%\\Scripts\\python.exe' '%PROD_DEPLOY_DIR%\\app.py' > '%PROD_LOG_FILE%' 2>&1 & " ^^
+                        "Start-Sleep -Seconds 1"
+
+                    echo Waiting for PROD backend to start...
+                    timeout /T 15 /NOBREAK >nul
+
+                    echo Calling the TaskPilot PROD health endpoint: http://127.0.0.1:%PROD_PORT%/health
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+                        "$ErrorActionPreference='Stop'; " ^
+                        "$response = Invoke-WebRequest -Uri 'http://127.0.0.1:%PROD_PORT%/health' -UseBasicParsing -TimeoutSec 20; " ^
+                        "if ($response.StatusCode -ne 200) { " ^
+                            "throw 'PROD health check returned status code ' + $response.StatusCode " ^
+                        "}; " ^
+                        "$body = $response.Content; " ^
+                        "Write-Host 'Response Body: ' $body; " ^
+                        "if ($body -notmatch 'healthy') { " ^
+                            "throw 'PROD health endpoint response does not contain healthy status' " ^
+                        "}; " ^
+                        "Write-Host 'PROD health check passed'"
+
+                    if errorlevel 1 (
+                        echo ERROR: PROD health check failed.
+                        echo Showing PROD log output:
+                        type "%PROD_LOG_FILE%"
+                        exit /b 1
+                    )
+
+                    echo PROD deployment and health check passed successfully.
                 '''
             }
         }
