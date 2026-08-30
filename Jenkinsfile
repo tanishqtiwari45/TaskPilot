@@ -917,10 +917,28 @@ pipeline {
                 bat '''
                     cd /d "%WORKSPACE%\\%FRONTEND_DIR%"
 
-                    echo Running frontend production build...
+                    echo Checking if frontend dependencies are installed...
 
-                   
-                       npm run build
+                    if not exist "node_modules\.bin\vite.cmd" (
+                        echo Vite dependency missing. Installing frontend dependencies...
+
+                        if exist "package-lock.json" (
+                            npm ci --no-audit --no-fund
+                        ) else (
+                            npm install --no-audit --no-fund
+                        )
+
+                        if errorlevel 1 (
+                            echo ERROR: Frontend dependency installation failed.
+                            exit /b 1
+                        )
+                    ) else (
+                        echo Frontend dependencies already installed.
+                    )
+
+                    echo.
+                    echo Running frontend production build...
+                    npm run build
 
                     if errorlevel 1 (
                         echo ERROR: Vite production build failed.
