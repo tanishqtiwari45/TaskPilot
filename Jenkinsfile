@@ -919,7 +919,7 @@ pipeline {
 
                     echo Checking if frontend dependencies are installed...
 
-                    if not exist "node_modules\.bin\vite.cmd" (
+                    if not exist "node_modules\\.bin\\vite.cmd" (
                         echo Vite dependency missing. Installing frontend dependencies...
 
                         if exist "package-lock.json" (
