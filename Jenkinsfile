@@ -472,17 +472,21 @@ pipeline {
             steps {
                 echo 'Setting up React frontend...'
 
-                dir("${FRONTEND_DIR}") {
-                    bat '''
-                        node --version
-                        npm --version
+                bat '''
+                    cd /d "%WORKSPACE%\frontend"
+                    node --version
+                    npm --version
 
-                        echo Installing frontend dependencies...
-                        npm ci --prefer-offline --no-audit
+                    echo Installing frontend dependencies...
+                    npm install --no-audit --no-fund
 
-                        echo Frontend setup completed successfully.
-                    '''
-                }
+                    if not exist "node_modules\vite\bin\vite.js" (
+                        echo ERROR: Vite dependency was not installed correctly.
+                        exit /b 1
+                    )
+
+                    echo Frontend setup completed successfully.
+                '''
             }
         }
 
@@ -490,20 +494,19 @@ pipeline {
             steps {
                 echo 'Building React application...'
 
-                dir("${FRONTEND_DIR}") {
-                    bat '''
-                        npm run build
+                bat '''
+                    cd /d "%WORKSPACE%\frontend"
+                    npm run build
 
-                        if not exist "dist" (
-                            echo ERROR: Frontend dist directory was not created.
-                            exit /b 1
-                        )
+                    if not exist "dist" (
+                        echo ERROR: Frontend dist directory was not created.
+                        exit /b 1
+                    )
 
-                        echo Frontend build completed successfully.
-                        echo Build output:
-                        dir dist
-                    '''
-                }
+                    echo Frontend build completed successfully.
+                    echo Build output:
+                    dir dist
+                '''
             }
         }
     }
