@@ -976,49 +976,49 @@ pipeline {
                 bat '''
                     setlocal enabledelayedexpansion
 
-                    set "PACKAGE_ROOT=%UAT_ROOT%\releases\TaskPilot-UAT-%BUILD_NUMBER%"
-                    set "PACKAGE_ZIP=%UAT_ROOT%\TaskPilot-UAT-%BUILD_NUMBER%.zip"
+                    set "PACKAGE_ROOT=%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%"
+                    set "PACKAGE_ZIP=%UAT_ROOT%\\ releases\\TaskPilot-UAT-%BUILD_NUMBER%.zip"
 
                     if exist "%UAT_ROOT%" (
                         rmdir /S /Q "%UAT_ROOT%"
                     )
 
                     mkdir "%UAT_ROOT%"
-                    mkdir "%UAT_ROOT%\releases"
-                    mkdir "%UAT_ROOT%\logs"
+                    mkdir "%UAT_ROOT%\\releases"
+                    mkdir "%UAT_ROOT%\\logs"
 
-                    if not exist "%WORKSPACE%\requirements.txt" (
+                    if not exist "%WORKSPACE%\\requirements.txt" (
                         echo ERROR: requirements.txt is missing from the repository.
                         exit /b 1
                     )
 
-                    if not exist "%WORKSPACE%\%FRONTEND_DIR%\dist\index.html" (
+                    if not exist "%WORKSPACE%\\%FRONTEND_DIR%\\dist\\index.html" (
                         echo ERROR: Frontend dist index.html is missing.
                         exit /b 1
                     )
 
                     echo Copying Python backend files...
-                    xcopy /E /I /Y "%WORKSPACE%\*.py" "%PACKAGE_ROOT%\" >nul
-                    xcopy /E /I /Y "%WORKSPACE%\requirements.txt" "%PACKAGE_ROOT%\" >nul
-                    if exist "%WORKSPACE%\.env" (
-                        xcopy /Y "%WORKSPACE%\.env" "%PACKAGE_ROOT%\" >nul
+                    xcopy /E /I /Y "%WORKSPACE%\\*.py" "%PACKAGE_ROOT%\" >nul
+                    xcopy /E /I /Y "%WORKSPACE%\\requirements.txt" "%PACKAGE_ROOT%\" >nul
+                    if exist "%WORKSPACE%\\.env" (
+                        xcopy /Y "%WORKSPACE%\\.env" "%PACKAGE_ROOT%\" >nul
                     )
 
                     echo Copying production frontend files...
-                    xcopy /E /I /Y "%WORKSPACE%\%FRONTEND_DIR%\dist" "%PACKAGE_ROOT%\%FRONTEND_DIR%\dist\" >nul
+                    xcopy /E /I /Y "%WORKSPACE%\\%FRONTEND_DIR%\\dist" "%PACKAGE_ROOT%\\%FRONTEND_DIR%\\dist\" >nul
 
-                    if not exist "%PACKAGE_ROOT%\app.py" (
+                    if not exist "%PACKAGE_ROOT%\\app.py" (
                         echo ERROR: Deployment package is missing app.py.
                         exit /b 1
                     )
 
-                    if not exist "%PACKAGE_ROOT%\%FRONTEND_DIR%\dist\index.html" (
+                    if not exist "%PACKAGE_ROOT%\\%FRONTEND_DIR%\\dist\\index.html" (
                         echo ERROR: Deployment package is missing frontend dist index.html.
                         exit /b 1
                     )
 
                     echo Creating deployment zip artifact...
-                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Compress-Archive -Path '%PACKAGE_ROOT%\*' -DestinationPath '%PACKAGE_ZIP%' -Force"
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Compress-Archive -Path '%PACKAGE_ROOT%\\*' -DestinationPath '%PACKAGE_ZIP%' -Force"
 
                     if errorlevel 1 (
                         echo ERROR: Packaging failed.
@@ -1042,21 +1042,21 @@ pipeline {
                 bat '''
                     setlocal enabledelayedexpansion
 
-                    set "PACKAGE_ROOT=%UAT_ROOT%\releases\TaskPilot-UAT-%BUILD_NUMBER%"
-                    set "DEPLOY_DIR=%UAT_ROOT%\current"
+                    set "PACKAGE_ROOT=%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%"
+                    set "DEPLOY_DIR=%UAT_ROOT%\\current"
 
                     if exist "%DEPLOY_DIR%" (
                         rmdir /S /Q "%DEPLOY_DIR%"
                     )
 
-                    xcopy /E /I /Y "%PACKAGE_ROOT%" "%DEPLOY_DIR%\" >nul
+                    xcopy /E /I /Y "%PACKAGE_ROOT%\\*" "%DEPLOY_DIR%\\*" >nul
 
                     if errorlevel 1 (
                         echo ERROR: UAT deployment copy failed.
                         exit /b 1
                     )
 
-                    if not exist "%DEPLOY_DIR%\app.py" (
+                    if not exist "%DEPLOY_DIR%\\app.py" (
                         echo ERROR: UAT deployment directory is missing app.py.
                         exit /b 1
                     )
@@ -1078,9 +1078,9 @@ pipeline {
                 bat '''
                     setlocal enabledelayedexpansion
 
-                    set "DEPLOY_DIR=%UAT_ROOT%\current"
-                    set "VENV_DIR=%DEPLOY_DIR%\.venv"
-                    set "LOG_FILE=%UAT_ROOT%\logs\taskpilot-uat.log"
+                    set "DEPLOY_DIR=%UAT_ROOT%\\current"
+                    set "VENV_DIR=%DEPLOY_DIR%\\.venv"
+                    set "LOG_FILE=%UAT_ROOT%\\logs\\taskpilot-uat.log"
                     set "PORT=5000"
 
                     echo Preparing the UAT runtime environment...
@@ -1094,20 +1094,20 @@ pipeline {
                         exit /b 1
                     )
 
-                    "%VENV_DIR%\Scripts\python.exe" -m pip install --upgrade pip setuptools wheel
+                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install --upgrade pip setuptools wheel
                     if errorlevel 1 (
                         echo ERROR: Failed to upgrade pip in UAT environment.
                         exit /b 1
                     )
 
-                    "%VENV_DIR%\Scripts\python.exe" -m pip install -r "%DEPLOY_DIR%\requirements.txt"
+                    "%VENV_DIR%\\Scripts\\python.exe" -m pip install -r "%DEPLOY_DIR%\\requirements.txt"
                     if errorlevel 1 (
                         echo ERROR: Failed to install backend dependencies in UAT environment.
                         exit /b 1
                     )
 
                     echo Initializing the UAT database and demo user...
-                    "%VENV_DIR%\Scripts\python.exe" "%DEPLOY_DIR%\database.py"
+                    "%VENV_DIR%\\Scripts\\python.exe" "%DEPLOY_DIR%\\database.py"
                     if errorlevel 1 (
                         echo ERROR: UAT database initialization failed.
                         exit /b 1
@@ -1125,7 +1125,7 @@ pipeline {
                     )
 
                     echo Starting TaskPilot in the UAT environment...
-                    start "TaskPilot-UAT" /B "%VENV_DIR%\Scripts\python.exe" "%DEPLOY_DIR%\app.py" > "%LOG_FILE%" 2>&1
+                    start "TaskPilot-UAT" /B "%VENV_DIR%\\Scripts\\python.exe" "%DEPLOY_DIR%\\app.py" > "%LOG_FILE%" 2>&1
 
                     echo Waiting for the backend to start...
                     timeout /T 15 /NOBREAK >nul
