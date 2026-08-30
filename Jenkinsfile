@@ -473,7 +473,7 @@ pipeline {
                 echo 'Setting up React frontend...'
 
                 bat '''
-                    cd /d "%WORKSPACE%\frontend"
+                    cd /d "%WORKSPACE%\\frontend"
                     node --version
                     npm --version
 
@@ -495,7 +495,7 @@ pipeline {
                 echo 'Building React application...'
 
                 bat '''
-                    cd /d "%WORKSPACE%\frontend"
+                    cd /d "%WORKSPACE%\\frontend"
                     npm run build
 
                     if not exist "dist" (
