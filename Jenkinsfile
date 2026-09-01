@@ -579,6 +579,10 @@ pipeline {
         )
     }
 
+    triggers {
+        githubPush()
+    }
+
     environment {
         // Project
         FRONTEND_DIR = 'frontend'
