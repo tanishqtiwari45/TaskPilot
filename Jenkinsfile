@@ -1330,7 +1330,7 @@ pipeline {
 
                     echo Stopping any previous TaskPilot PROD process on port %PROD_PORT%...
                     for /f "tokens=1,2,3,4,5" %%a in ('netstat -ano ^| findstr :%PROD_PORT%') do (
-                        if not "%%e"==\"\" (
+                        if not "%%e"=="" (
                             taskkill /PID %%e /F >nul 2>&1
                         )
                     )
@@ -1339,15 +1339,24 @@ pipeline {
                         del /Q "%PROD_LOG_FILE%"
                     )
 
+                    echo Updating PROD .env configuration...
+                    (
+                        echo FLASK_ENV=%PROD_ENV%
+                        echo SECRET_KEY=taskpilot-prod-secret-key
+                        echo DB_HOST=%DB_HOST%
+                        echo DB_PORT=%DB_PORT%
+                        echo DB_USER=%DB_USER%
+                        echo DB_PASSWORD=%DB_PASSWORD%
+                        echo DB_NAME=%DB_NAME%
+                        echo PORT=%PROD_PORT%
+                        echo HOST=0.0.0.0
+                    ) > "%PROD_DEPLOY_DIR%\\.env"
+
                     echo Starting TaskPilot in the PROD environment on port %PROD_PORT%...
-                    powershell -NoProfile -ExecutionPolicy Bypass -Command ^^
-                        "$env:PORT='%PROD_PORT%'; " ^^
-                        "$env:FLASK_ENV='%PROD_ENV%'; " ^^
-                        "& '%PROD_VENV_DIR%\\Scripts\\python.exe' '%PROD_DEPLOY_DIR%\\app.py' > '%PROD_LOG_FILE%' 2>&1 & " ^^
-                        "Start-Sleep -Seconds 1"
+                    start "TaskPilot-PROD" /B "%PROD_VENV_DIR%\\Scripts\\python.exe" "%PROD_DEPLOY_DIR%\\app.py" > "%PROD_LOG_FILE%" 2>&1
 
                     echo Waiting for PROD backend to start...
-                    timeout /T 15 /NOBREAK >nul
+                    timeout /T 15 /NOBREAK
 
                     echo Calling the TaskPilot PROD health endpoint: http://127.0.0.1:%PROD_PORT%/health
                     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
