@@ -37,11 +37,10 @@ pipeline {
         VENV_DIR = "${WORKSPACE}\\.venv"
         PYTHONPATH = "${WORKSPACE}"
 
-        // MySQL / UAT runtime configuration
+        // MySQL / Database Configuration (DO NOT include passwords here - use Jenkins Credentials)
         DB_HOST = '127.0.0.1'
         DB_PORT = '3306'
         DB_USER = 'root'
-        DB_PASSWORD = 'Octe@2026$#'
         DB_NAME = 'task_pilot'
 
         // Production Configuration
@@ -462,14 +461,14 @@ pipeline {
                     if exist "%WORKSPACE%\\.env" (
                         xcopy /Y /H "%WORKSPACE%\\.env" "%PACKAGE_ROOT%\" >nul
                     ) else (
-                        echo Creating runtime .env for UAT package...
+                        echo Creating runtime .env template for package...
                         (
                             echo FLASK_ENV=development
-                            echo SECRET_KEY=taskpilot-uat-secret-key
+                            echo SECRET_KEY=__WILL_BE_SET_BY_JENKINS__
                             echo DB_HOST=%DB_HOST%
                             echo DB_PORT=%DB_PORT%
                             echo DB_USER=%DB_USER%
-                            echo DB_PASSWORD=%DB_PASSWORD%
+                            echo DB_PASSWORD=__WILL_BE_SET_BY_JENKINS__
                             echo DB_NAME=%DB_NAME%
                         ) > "%PACKAGE_ROOT%\\.env"
                     )
@@ -540,11 +539,21 @@ pipeline {
         // 8. UAT HEALTH / SMOKE TEST
         // =========================================================
         stage('UAT Health Check') {
+            options {
+                timeout(time: 60, unit: 'MINUTES')
+            }
             steps {
                 echo '=================================================='
                 echo '           UAT HEALTH / SMOKE TEST'
                 echo '=================================================='
 
+                withCredentials([
+                    usernamePassword(credentialsId: 'taskpilot-uat-db',
+                                   usernameVariable: 'UAT_DB_USER',
+                                   passwordVariable: 'UAT_DB_PASSWORD'),
+                    string(credentialsId: 'taskpilot-uat-secret-key',
+                          variable: 'UAT_SECRET_KEY')
+                ]) {
                 bat '''
                     setlocal enabledelayedexpansion
 
@@ -554,14 +563,14 @@ pipeline {
                     set "PORT=5000"
                     set "DB_HOST=%DB_HOST%"
                     set "DB_PORT=%DB_PORT%"
-                    set "DB_USER=%DB_USER%"
-                    set "DB_PASSWORD=%DB_PASSWORD%"
+                    set "DB_USER=%UAT_DB_USER%"
+                    set "DB_PASSWORD=%UAT_DB_PASSWORD%"
                     set "DB_NAME=%DB_NAME%"
 
                     if not exist "%DEPLOY_DIR%\\.env" (
                         (
                             echo FLASK_ENV=development
-                            echo SECRET_KEY=taskpilot-uat-secret-key
+                            echo SECRET_KEY=%UAT_SECRET_KEY%
                             echo DB_HOST=%DB_HOST%
                             echo DB_PORT=%DB_PORT%
                             echo DB_USER=%DB_USER%
@@ -640,6 +649,7 @@ pipeline {
 
                     echo UAT deployment and health check passed successfully.
                 '''
+                }
             }
         }
 
@@ -732,11 +742,21 @@ pipeline {
         // 11. PROD HEALTH CHECK
         // =========================================================
         stage('PROD Health Check') {
+            options {
+                timeout(time: 60, unit: 'MINUTES')
+            }
             steps {
                 echo '=================================================='
                 echo '         PRODUCTION HEALTH / SMOKE TEST'
                 echo '=================================================='
 
+                withCredentials([
+                    usernamePassword(credentialsId: 'taskpilot-prod-db',
+                                   usernameVariable: 'PROD_DB_USER',
+                                   passwordVariable: 'PROD_DB_PASSWORD'),
+                    string(credentialsId: 'taskpilot-prod-secret-key',
+                          variable: 'PROD_SECRET_KEY')
+                ]) {
                 bat '''
                     setlocal enabledelayedexpansion
 
@@ -744,6 +764,11 @@ pipeline {
                     set "PROD_VENV_DIR=%PROD_DEPLOY_DIR%\\.venv"
                     set "PROD_LOG_FILE=%PROD_ROOT%\\logs\\taskpilot-prod.log"
                     set "PROD_PORT=%PROD_PORT%"
+                    set "DB_HOST=%DB_HOST%"
+                    set "DB_PORT=%DB_PORT%"
+                    set "DB_USER=%PROD_DB_USER%"
+                    set "DB_PASSWORD=%PROD_DB_PASSWORD%"
+                    set "DB_NAME=%DB_NAME%"
 
                     echo Preparing the PROD runtime environment...
                     if exist "%PROD_VENV_DIR%" (
@@ -789,7 +814,7 @@ pipeline {
                     echo Updating PROD .env configuration...
                     (
                         echo FLASK_ENV=%PROD_ENV%
-                        echo SECRET_KEY=taskpilot-prod-secret-key
+                        echo SECRET_KEY=%PROD_SECRET_KEY%
                         echo DB_HOST=%DB_HOST%
                         echo DB_PORT=%DB_PORT%
                         echo DB_USER=%DB_USER%
@@ -828,6 +853,7 @@ pipeline {
 
                     echo PROD deployment and health check passed successfully.
                 '''
+                }
             }
         }
     }
