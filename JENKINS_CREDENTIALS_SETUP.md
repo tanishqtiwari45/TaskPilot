@@ -57,7 +57,7 @@ Click **"+ Add Credentials"** and fill in the form:
 | **Kind** | Username with password |
 | **Scope** | Global (Jenkins, nodes, items, all child items, etc) |
 | **Username** | `root` |
-| **Password** | `Octe@2026$#` |
+| **Password** | Set this to the UAT database password in your environment |
 | **ID** | `taskpilot-uat-db` |
 | **Description** | TaskPilot UAT Database Credentials |
 
@@ -71,7 +71,7 @@ Click **"+ Add Credentials"** and fill in the form:
 |-------|-------|
 | **Kind** | Secret text |
 | **Scope** | Global (Jenkins, nodes, items, all child items, etc) |
-| **Secret** | `taskpilot-uat-secret-key-2026` |
+| **Secret** | Generate and store a unique UAT application secret |
 | **ID** | `taskpilot-uat-secret-key` |
 | **Description** | TaskPilot UAT Flask SECRET_KEY |
 
@@ -86,7 +86,7 @@ Click **"+ Add Credentials"** and fill in the form:
 | **Kind** | Username with password |
 | **Scope** | Global (Jenkins, nodes, items, all child items, etc) |
 | **Username** | `root` |
-| **Password** | `YourProdPassword123!` (⚠️ DIFFERENT from UAT) |
+| **Password** | Set this to the PROD database password; it must differ from UAT |
 | **ID** | `taskpilot-prod-db` |
 | **Description** | TaskPilot PROD Database Credentials |
 
@@ -100,7 +100,7 @@ Click **"+ Add Credentials"** and fill in the form:
 |-------|-------|
 | **Kind** | Secret text |
 | **Scope** | Global (Jenkins, nodes, items, all child items, etc) |
-| **Secret** | `taskpilot-prod-secret-key-2026-production` |
+| **Secret** | Generate and store a unique PROD application secret |
 | **ID** | `taskpilot-prod-secret-key` |
 | **Description** | TaskPilot PROD Flask SECRET_KEY |
 
@@ -122,6 +122,19 @@ All four credentials should be listed with their respective icons.
 ---
 
 ## Next Steps After Creating Credentials
+
+### Mandatory Jenkins Scope Check
+
+The IDs must be created in the same Jenkins controller that runs `TaskPilot-CI`:
+
+1. Open **Manage Jenkins → Credentials → System → Global credentials (unrestricted)**.
+2. Confirm all four IDs appear there exactly as written above.
+3. If credentials were created inside a folder, move or recreate them in the folder containing the job, or change the pipeline bindings to that folder's scope.
+4. Confirm the job's service account has permission to use those credentials.
+
+Do not create credentials only under a personal user store. The pipeline runs as the Jenkins job and cannot see user-scoped credentials unless the job is explicitly configured for that scope.
+
+The pipeline validates credentials before copying UAT or PROD artifacts. If an ID is missing, it intentionally stops before changing the active deployment; adding a fallback would expose secrets and is not supported.
 
 ### 1. Trigger a Test Build
 
@@ -161,11 +174,11 @@ Jenkins will automatically trigger a build. Watch the stages:
 
 1. Open Jenkins Build #N
 2. Click **"Console Output"**
-3. Search for your database password: `Octe@2026$#`
-   - ❌ Should NOT appear anywhere
-4. Search for credential strings: `taskpilot-uat-secret-key`
-   - ❌ Should NOT appear anywhere
-5. You should only see masked values like: `****`
+2. Search for the actual database password you configured
+  - ❌ It should NOT appear anywhere
+3. Search for the actual application secret
+  - ❌ It should NOT appear anywhere
+4. Credential values should be masked by Jenkins if they are ever emitted
 
 ---
 
