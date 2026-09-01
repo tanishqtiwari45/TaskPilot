@@ -80,38 +80,6 @@ pipeline {
         }
 
         // =========================================================
-        // 2. VALIDATE DEPLOYMENT CREDENTIALS
-        // =========================================================
-        stage('Validate Deployment Credentials') {
-            steps {
-                echo '=================================================='
-                echo '          VALIDATE DEPLOYMENT CREDENTIALS'
-                echo '=================================================='
-
-                script {
-                    try {
-                        withCredentials([
-                            usernamePassword(credentialsId: 'taskpilot-uat-db',
-                                           usernameVariable: 'UAT_DB_USER',
-                                           passwordVariable: 'UAT_DB_PASSWORD'),
-                            string(credentialsId: 'taskpilot-uat-secret-key',
-                                  variable: 'UAT_SECRET_KEY'),
-                            usernamePassword(credentialsId: 'taskpilot-prod-db',
-                                           usernameVariable: 'PROD_DB_USER',
-                                           passwordVariable: 'PROD_DB_PASSWORD'),
-                            string(credentialsId: 'taskpilot-prod-secret-key',
-                                  variable: 'PROD_SECRET_KEY')
-                        ]) {
-                            echo 'All required UAT and PROD credentials are available.'
-                        }
-                    } catch (Exception credentialError) {
-                        error('Required Jenkins credentials are missing or inaccessible. Create taskpilot-uat-db, taskpilot-uat-secret-key, taskpilot-prod-db, and taskpilot-prod-secret-key in the Jenkins credential store before deploying.')
-                    }
-                }
-            }
-        }
-
-        // =========================================================
         // 2. BACKEND SETUP
         // =========================================================
         stage('Backend Setup') {
