@@ -504,6 +504,13 @@ pipeline {
                 echo '               DEPLOY UAT'
                 echo '=================================================='
 
+                withCredentials([
+                    usernamePassword(credentialsId: 'taskpilot-uat-db',
+                                   usernameVariable: 'UAT_DEPLOY_DB_USER',
+                                   passwordVariable: 'UAT_DEPLOY_DB_PASSWORD'),
+                    string(credentialsId: 'taskpilot-uat-secret-key',
+                          variable: 'UAT_DEPLOY_SECRET_KEY')
+                ]) {
                 bat '''
                     setlocal enabledelayedexpansion
 
@@ -528,6 +535,7 @@ pipeline {
 
                     echo UAT deployment completed: %DEPLOY_DIR%
                 '''
+                }
             }
         }
 
@@ -686,6 +694,13 @@ pipeline {
                 echo '            DEPLOY TO PRODUCTION'
                 echo '=================================================='
 
+                withCredentials([
+                    usernamePassword(credentialsId: 'taskpilot-prod-db',
+                                   usernameVariable: 'PROD_DEPLOY_DB_USER',
+                                   passwordVariable: 'PROD_DEPLOY_DB_PASSWORD'),
+                    string(credentialsId: 'taskpilot-prod-secret-key',
+                          variable: 'PROD_DEPLOY_SECRET_KEY')
+                ]) {
                 bat '''
                     setlocal enabledelayedexpansion
 
@@ -730,6 +745,7 @@ pipeline {
 
                     echo PROD deployment copied successfully: %PROD_DEPLOY_DIR%
                 '''
+                }
             }
         }
 
