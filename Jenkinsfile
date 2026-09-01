@@ -80,6 +80,38 @@ pipeline {
         }
 
         // =========================================================
+        // 2. VALIDATE DEPLOYMENT CREDENTIALS
+        // =========================================================
+        stage('Validate Deployment Credentials') {
+            steps {
+                echo '=================================================='
+                echo '          VALIDATE DEPLOYMENT CREDENTIALS'
+                echo '=================================================='
+
+                script {
+                    try {
+                        withCredentials([
+                            usernamePassword(credentialsId: 'taskpilot-uat-db',
+                                           usernameVariable: 'UAT_DB_USER',
+                                           passwordVariable: 'UAT_DB_PASSWORD'),
+                            string(credentialsId: 'taskpilot-uat-secret-key',
+                                  variable: 'UAT_SECRET_KEY'),
+                            usernamePassword(credentialsId: 'taskpilot-prod-db',
+                                           usernameVariable: 'PROD_DB_USER',
+                                           passwordVariable: 'PROD_DB_PASSWORD'),
+                            string(credentialsId: 'taskpilot-prod-secret-key',
+                                  variable: 'PROD_SECRET_KEY')
+                        ]) {
+                            echo 'All required UAT and PROD credentials are available.'
+                        }
+                    } catch (Exception credentialError) {
+                        error('Required Jenkins credentials are missing or inaccessible. Create taskpilot-uat-db, taskpilot-uat-secret-key, taskpilot-prod-db, and taskpilot-prod-secret-key in the Jenkins credential store before deploying.')
+                    }
+                }
+            }
+        }
+
+        // =========================================================
         // 2. BACKEND SETUP
         // =========================================================
         stage('Backend Setup') {
@@ -458,20 +490,16 @@ pipeline {
                     echo Copying Python backend files...
                     xcopy /E /I /Y "%WORKSPACE%\\*.py" "%PACKAGE_ROOT%\" >nul
                     xcopy /E /I /Y "%WORKSPACE%\\requirements.txt" "%PACKAGE_ROOT%\" >nul
-                    if exist "%WORKSPACE%\\.env" (
-                        xcopy /Y /H "%WORKSPACE%\\.env" "%PACKAGE_ROOT%\" >nul
-                    ) else (
-                        echo Creating runtime .env template for package...
-                        (
-                            echo FLASK_ENV=development
-                            echo SECRET_KEY=__WILL_BE_SET_BY_JENKINS__
-                            echo DB_HOST=%DB_HOST%
-                            echo DB_PORT=%DB_PORT%
-                            echo DB_USER=%DB_USER%
-                            echo DB_PASSWORD=__WILL_BE_SET_BY_JENKINS__
-                            echo DB_NAME=%DB_NAME%
-                        ) > "%PACKAGE_ROOT%\\.env"
-                    )
+                    echo Creating runtime .env template for package...
+                    (
+                        echo FLASK_ENV=development
+                        echo SECRET_KEY=__WILL_BE_SET_BY_JENKINS__
+                        echo DB_HOST=%DB_HOST%
+                        echo DB_PORT=%DB_PORT%
+                        echo DB_USER=__WILL_BE_SET_BY_JENKINS__
+                        echo DB_PASSWORD=__WILL_BE_SET_BY_JENKINS__
+                        echo DB_NAME=%DB_NAME%
+                    ) > "%PACKAGE_ROOT%\\.env"
 
                     echo Copying production frontend files...
                     xcopy /E /I /Y "%WORKSPACE%\\%FRONTEND_DIR%\\dist" "%PACKAGE_ROOT%\\%FRONTEND_DIR%\\dist\" >nul
@@ -567,17 +595,16 @@ pipeline {
                     set "DB_PASSWORD=%UAT_DB_PASSWORD%"
                     set "DB_NAME=%DB_NAME%"
 
-                    if not exist "%DEPLOY_DIR%\\.env" (
-                        (
-                            echo FLASK_ENV=development
-                            echo SECRET_KEY=%UAT_SECRET_KEY%
-                            echo DB_HOST=%DB_HOST%
-                            echo DB_PORT=%DB_PORT%
-                            echo DB_USER=%DB_USER%
-                            echo DB_PASSWORD=%DB_PASSWORD%
-                            echo DB_NAME=%DB_NAME%
-                        ) > "%DEPLOY_DIR%\\.env"
-                    )
+                    echo Writing UAT runtime configuration from Jenkins Credentials...
+                    (
+                        echo FLASK_ENV=development
+                        echo SECRET_KEY=%UAT_SECRET_KEY%
+                        echo DB_HOST=%DB_HOST%
+                        echo DB_PORT=%DB_PORT%
+                        echo DB_USER=%DB_USER%
+                        echo DB_PASSWORD=%DB_PASSWORD%
+                        echo DB_NAME=%DB_NAME%
+                    ) > "%DEPLOY_DIR%\\.env"
 
                     echo Preparing the UAT runtime environment...
                     if exist "%VENV_DIR%" (
