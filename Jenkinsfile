@@ -113,29 +113,29 @@ pipeline {
                                     echo ERROR: Jenkins workspace does not exist: %WORKSPACE%
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\.git" (
+                                if not exist "%WORKSPACE%\\.git" (
                                     echo ERROR: Repository was not checked out in the Jenkins workspace.
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\requirements.txt" (
+                                if not exist "%WORKSPACE%\\requirements.txt" (
                                     echo ERROR: requirements.txt was not found.
                                     echo Action: Verify the repository checkout and branch configuration.
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\frontend\package.json" (
-                                    echo ERROR: frontend\package.json was not found.
+                                if not exist "%WORKSPACE%\\frontend\\package.json" (
+                                    echo ERROR: frontend\\package.json was not found.
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\frontend\package-lock.json" (
-                                    echo ERROR: frontend\package-lock.json is required for deterministic npm ci.
+                                if not exist "%WORKSPACE%\\frontend\\package-lock.json" (
+                                    echo ERROR: frontend\\package-lock.json is required for deterministic npm ci.
                                     echo Action: Commit the lockfile before running CI.
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\app.py" (
+                                if not exist "%WORKSPACE%\\app.py" (
                                     echo ERROR: app.py was not found.
                                     exit /b 1
                                 )
-                                if not exist "%WORKSPACE%\database.py" (
+                                if not exist "%WORKSPACE%\\database.py" (
                                     echo ERROR: database.py was not found.
                                     exit /b 1
                                 )
