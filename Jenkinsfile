@@ -497,7 +497,7 @@ pipeline {
                         exit /b 1
                     )
 
-                    node_modules\.bin\vite.cmd --version
+                    node_modules\\.bin\\vite.cmd --version
 
                     if errorlevel 1 (
                         echo ERROR: Local Vite executable could not run.
