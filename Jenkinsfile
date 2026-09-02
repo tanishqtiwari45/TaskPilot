@@ -33,7 +33,10 @@ pipeline {
         PROD_ROOT = 'C:\\TaskPilot-PROD'
 
         // Python
-        PYTHON_EXE = 'C:\\Users\\Tanishq Tiwari\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
+        PYTHON_EXE = 'python'
+        NODE_EXE = 'node'
+        NPM_EXE = 'npm.cmd'
+        GIT_EXE = 'git.exe'
         VENV_DIR = "${WORKSPACE}\\.venv"
         PYTHONPATH = "${WORKSPACE}"
 
@@ -80,7 +83,140 @@ pipeline {
         }
 
         // =========================================================
-        // 2. BACKEND SETUP
+        // 2. PREFLIGHT VALIDATION
+        // =========================================================
+        stage('Preflight Validation') {
+            steps {
+                echo '=================================================='
+                echo '             PREFLIGHT VALIDATION'
+                echo '=================================================='
+
+                script {
+                    try {
+                        withCredentials([
+                            usernamePassword(credentialsId: 'taskpilot-uat-db',
+                                           usernameVariable: 'PREFLIGHT_UAT_DB_USER',
+                                           passwordVariable: 'PREFLIGHT_UAT_DB_PASSWORD'),
+                            string(credentialsId: 'taskpilot-uat-secret-key',
+                                  variable: 'PREFLIGHT_UAT_SECRET_KEY')
+                        ]) {
+                            bat '''
+                                setlocal
+                                echo TaskPilot CI/CD
+                                echo Branch: %BRANCH_NAME%
+                                echo Jenkins workspace: %WORKSPACE%
+                                echo Frontend: %FRONTEND_DIR%
+                                echo Build type: production
+                                echo Environment: UAT then PROD after approval
+
+                                if not exist "%WORKSPACE%" (
+                                    echo ERROR: Jenkins workspace does not exist: %WORKSPACE%
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\.git" (
+                                    echo ERROR: Repository was not checked out in the Jenkins workspace.
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\requirements.txt" (
+                                    echo ERROR: requirements.txt was not found.
+                                    echo Action: Verify the repository checkout and branch configuration.
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\frontend\package.json" (
+                                    echo ERROR: frontend\package.json was not found.
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\frontend\package-lock.json" (
+                                    echo ERROR: frontend\package-lock.json is required for deterministic npm ci.
+                                    echo Action: Commit the lockfile before running CI.
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\app.py" (
+                                    echo ERROR: app.py was not found.
+                                    exit /b 1
+                                )
+                                if not exist "%WORKSPACE%\database.py" (
+                                    echo ERROR: database.py was not found.
+                                    exit /b 1
+                                )
+                                if "%DB_HOST%"=="" (
+                                    echo ERROR: DB_HOST is not configured.
+                                    exit /b 1
+                                )
+                                if "%DB_PORT%"=="" (
+                                    echo ERROR: DB_PORT is not configured.
+                                    exit /b 1
+                                )
+                                if "%DB_NAME%"=="" (
+                                    echo ERROR: DB_NAME is not configured.
+                                    exit /b 1
+                                )
+
+                                where "%PYTHON_EXE%" >nul 2>&1
+                                if errorlevel 1 (
+                                    echo ERROR: Python executable was not found: %PYTHON_EXE%
+                                    echo Action: Configure Python on the Jenkins service PATH or set PYTHON_EXE in the job environment.
+                                    exit /b 1
+                                )
+                                "%PYTHON_EXE%" --version
+                                if errorlevel 1 (
+                                    echo ERROR: Python could not be started: %PYTHON_EXE%
+                                    exit /b 1
+                                )
+                                "%PYTHON_EXE%" -m pip --version
+                                if errorlevel 1 (
+                                    echo ERROR: pip is unavailable for %PYTHON_EXE%.
+                                    exit /b 1
+                                )
+
+                                where "%NODE_EXE%" >nul 2>&1
+                                if errorlevel 1 (
+                                    echo ERROR: Node.js executable was not found: %NODE_EXE%
+                                    echo Action: Configure Node.js on the Jenkins service PATH.
+                                    exit /b 1
+                                )
+                                "%NODE_EXE%" --version
+                                if errorlevel 1 (
+                                    echo ERROR: Node.js could not be started.
+                                    exit /b 1
+                                )
+                                where "%NPM_EXE%" >nul 2>&1
+                                if errorlevel 1 (
+                                    echo ERROR: npm executable was not found: %NPM_EXE%
+                                    echo Action: Configure npm on the Jenkins service PATH.
+                                    exit /b 1
+                                )
+                                "%NPM_EXE%" --version
+                                if errorlevel 1 (
+                                    echo ERROR: npm could not be started.
+                                    exit /b 1
+                                )
+
+                                where "%GIT_EXE%" >nul 2>&1
+                                if errorlevel 1 (
+                                    echo ERROR: Git executable was not found: %GIT_EXE%
+                                    echo Action: Configure Git on the Jenkins service PATH or fix Jenkins Git tool configuration.
+                                    exit /b 1
+                                )
+                                "%GIT_EXE%" --version
+                                if errorlevel 1 (
+                                    echo ERROR: Git could not be started.
+                                    exit /b 1
+                                )
+
+                                echo UAT credentials resolved successfully without displaying secret values.
+                                echo Preflight validation completed successfully.
+                            '''
+                        }
+                    } catch (Exception preflightError) {
+                        error('PREFLIGHT VALIDATION FAILED. Verify Jenkins global credentials taskpilot-uat-db and taskpilot-uat-secret-key, the Jenkins service PATH, and the required repository files. Secret values are intentionally never printed.')
+                    }
+                }
+            }
+        }
+
+        // =========================================================
+        // 3. BACKEND SETUP
         // =========================================================
         stage('Backend Setup') {
             steps {
@@ -121,6 +257,10 @@ pipeline {
 
                     if exist "%VENV_DIR%" (
                         rmdir /S /Q "%VENV_DIR%"
+                        if errorlevel 1 (
+                            echo ERROR: Failed to remove the stale virtual environment.
+                            exit /b 1
+                        )
                     )
 
                     echo.
@@ -135,6 +275,11 @@ pipeline {
 
                     if not exist "%VENV_DIR%\\Scripts\\python.exe" (
                         echo ERROR: Virtual environment Python executable was not created.
+                        exit /b 1
+                    )
+
+                    if not exist "%VENV_DIR%\\Scripts\\pip.exe" (
+                        echo ERROR: Virtual environment pip executable was not created.
                         exit /b 1
                     )
 
@@ -256,7 +401,7 @@ pipeline {
 
                     echo.
                     echo Node version:
-                    node --version
+                    "%NODE_EXE%" --version
 
                     if errorlevel 1 (
                         echo ERROR: Node.js is not available to Jenkins.
@@ -265,7 +410,7 @@ pipeline {
 
                     echo.
                     echo npm version:
-                    npm --version
+                    "%NPM_EXE%" --version
 
                     if errorlevel 1 (
                         echo ERROR: npm is not available to Jenkins.
@@ -275,13 +420,17 @@ pipeline {
                     echo.
                     echo Checking npm configuration...
 
-                    npm config get registry
+                    "%NPM_EXE%" config get registry
 
                     echo.
                     echo Removing old node_modules...
 
                     if exist "node_modules" (
                         rmdir /S /Q "node_modules"
+                        if errorlevel 1 (
+                            echo ERROR: Failed to remove stale frontend dependencies.
+                            exit /b 1
+                        )
                     )
 
                     echo.
@@ -292,7 +441,7 @@ pipeline {
                         echo package-lock.json found.
                         echo Running npm ci...
 
-                        npm ci --no-audit --no-fund
+                        "%NPM_EXE%" ci --no-audit --no-fund
 
                         if errorlevel 1 (
                             echo ERROR: npm ci failed.
@@ -300,18 +449,9 @@ pipeline {
                         )
 
                     ) else (
-
-                        echo package-lock.json not found.
-                        echo Running npm install...
-
-                        npm install --no-audit --no-fund
-
-                        if errorlevel 1 (
-                            echo ERROR: npm install failed.
-                            exit /b 1
-                        )
+                        echo ERROR: package-lock.json is required; npm install is not permitted in CI.
+                        exit /b 1
                     )
-
                     echo.
                     echo Verifying node_modules...
 
@@ -325,7 +465,7 @@ pipeline {
                     echo.
                     echo Checking Vite package...
 
-                    npm ls vite --depth=0
+                    "%NPM_EXE%" ls vite --depth=0
 
                     if errorlevel 1 (
                         echo ERROR: Vite is not installed as a project dependency.
@@ -351,7 +491,13 @@ pipeline {
                     echo.
                     echo Testing Vite version...
 
-                    npx --no-install vite --version
+                    for /f "delims=" %%v in ('"%NODE_EXE%" -p "require('./node_modules/vite/package.json').version"') do set "VITE_VERSION=%%v"
+                    if not "%VITE_VERSION%"=="5.4.21" (
+                        echo ERROR: Vite version mismatch. Expected 5.4.21 from package-lock.json, found %VITE_VERSION%.
+                        exit /b 1
+                    )
+
+                    node_modules\.bin\vite.cmd --version
 
                     if errorlevel 1 (
                         echo ERROR: Local Vite executable could not run.
@@ -379,25 +525,18 @@ pipeline {
                     echo Checking if frontend dependencies are installed...
 
                     if not exist "node_modules\\.bin\\vite.cmd" (
-                        echo Vite dependency missing. Installing frontend dependencies...
+                        echo ERROR: Local Vite executable is missing. Frontend Setup should have installed it with npm ci.
+                        exit /b 1
+                    )
 
-                        if exist "package-lock.json" (
-                            npm ci --no-audit --no-fund
-                        ) else (
-                            npm install --no-audit --no-fund
-                        )
-
-                        if errorlevel 1 (
-                            echo ERROR: Frontend dependency installation failed.
-                            exit /b 1
-                        )
-                    ) else (
-                        echo Frontend dependencies already installed.
+                    if not exist "package-lock.json" (
+                        echo ERROR: package-lock.json is required for the production build.
+                        exit /b 1
                     )
 
                     echo.
                     echo Running frontend production build...
-                    npm run build
+                    "%NPM_EXE%" run build
 
                     if errorlevel 1 (
                         echo ERROR: Vite production build failed.
@@ -409,6 +548,11 @@ pipeline {
 
                     if not exist "dist" (
                         echo ERROR: dist directory was not created.
+                        exit /b 1
+                    )
+
+                    if not exist "dist\\index.html" (
+                        echo ERROR: frontend\\dist\\index.html was not created.
                         exit /b 1
                     )
 
@@ -456,8 +600,16 @@ pipeline {
                     )
 
                     echo Copying Python backend files...
-                    xcopy /E /I /Y "%WORKSPACE%\\*.py" "%PACKAGE_ROOT%\" >nul
-                    xcopy /E /I /Y "%WORKSPACE%\\requirements.txt" "%PACKAGE_ROOT%\" >nul
+                        xcopy /E /I /Y "%WORKSPACE%\\*.py" "%PACKAGE_ROOT%\" >nul
+                        if errorlevel 1 (
+                            echo ERROR: Failed to copy Python backend files into the package.
+                            exit /b 1
+                        )
+                        xcopy /E /I /Y "%WORKSPACE%\\requirements.txt" "%PACKAGE_ROOT%\" >nul
+                        if errorlevel 1 (
+                            echo ERROR: Failed to copy requirements.txt into the package.
+                            exit /b 1
+                        )
                     echo Creating runtime .env template for package...
                     (
                         echo FLASK_ENV=development
@@ -471,6 +623,10 @@ pipeline {
 
                     echo Copying production frontend files...
                     xcopy /E /I /Y "%WORKSPACE%\\%FRONTEND_DIR%\\dist" "%PACKAGE_ROOT%\\%FRONTEND_DIR%\\dist\" >nul
+                        if errorlevel 1 (
+                            echo ERROR: Failed to copy frontend production files into the package.
+                            exit /b 1
+                        )
 
                     if not exist "%PACKAGE_ROOT%\\app.py" (
                         echo ERROR: Deployment package is missing app.py.
@@ -496,7 +652,39 @@ pipeline {
         }
 
         // =========================================================
-        // 7. DEPLOY TO UAT
+        // 7. DEPLOYMENT PREFLIGHT
+        // =========================================================
+        stage('Deployment Preflight') {
+            steps {
+                echo '=================================================='
+                echo '            DEPLOYMENT PREFLIGHT'
+                echo '=================================================='
+
+                bat '''
+                    if not exist "%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%.zip" (
+                        echo ERROR: UAT package archive is missing.
+                        exit /b 1
+                    )
+                    if not exist "%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%\\app.py" (
+                        echo ERROR: Packaged app.py is missing.
+                        exit /b 1
+                    )
+                    if not exist "%UAT_ROOT%\\releases\\TaskPilot-UAT-%BUILD_NUMBER%\\%FRONTEND_DIR%\\dist\\index.html" (
+                        echo ERROR: Packaged frontend\\dist\\index.html is missing.
+                        exit /b 1
+                    )
+                    if not exist "%UAT_ROOT%" mkdir "%UAT_ROOT%"
+                    if errorlevel 1 (
+                        echo ERROR: UAT deployment root is unavailable: %UAT_ROOT%
+                        exit /b 1
+                    )
+                    echo Package and UAT deployment prerequisites validated successfully.
+                '''
+            }
+        }
+
+        // =========================================================
+        // 8. DEPLOY TO UAT
         // =========================================================
         stage('Deploy UAT') {
             steps {
@@ -686,7 +874,7 @@ pipeline {
         }
 
         // =========================================================
-        // 10. DEPLOY PROD
+        // 11. DEPLOY PROD
         // =========================================================
         stage('Deploy PROD') {
             steps {
@@ -708,9 +896,25 @@ pipeline {
                     set "PROD_DEPLOY_DIR=%PROD_ROOT%\\current"
 
                     if not exist "%PACKAGE_ROOT%" (
-                        echo ERROR: UAT artifact not found at %PACKAGE_ROOT%
+                        echo ERROR: Approved UAT artifact not found at %PACKAGE_ROOT%.
+                        echo Possible causes: the package was removed or UAT did not complete.
                         exit /b 1
                     )
+                    if not exist "%PACKAGE_ROOT%\\app.py" (
+                        echo ERROR: Approved artifact is missing app.py.
+                        exit /b 1
+                    )
+                    if not exist "%PACKAGE_ROOT%\\%FRONTEND_DIR%\\dist\\index.html" (
+                        echo ERROR: Approved artifact is missing frontend\\dist\\index.html.
+                        exit /b 1
+                    )
+                    if not exist "%PROD_ROOT%" mkdir "%PROD_ROOT%"
+                    if errorlevel 1 (
+                        echo ERROR: PROD deployment root is unavailable: %PROD_ROOT%.
+                        exit /b 1
+                    )
+
+                    echo PROD credentials and approved artifact validated successfully.
 
                     echo Creating PROD environment structure...
                     if not exist "%PROD_ROOT%" (
